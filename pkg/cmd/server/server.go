@@ -89,6 +89,8 @@ func RunServer() error {
 	}
 	defer db.Close()
 
+
+
 	v1API := v1.NewToDoServiceServer(db)
 
 	// run HTTP gateway

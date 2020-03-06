@@ -22,13 +22,13 @@ const (
 
 // toDoServiceServer is implementation of v1.ToDoServiceServer proto interface
 type toDoServiceServer struct {
-	db *sql.DB
-
+	database *storage.mysqldb
 }
 
 // NewToDoServiceServer creates ToDo service
 func NewToDoServiceServer(db *sql.DB) v1.ToDoServiceServer {
-	return &toDoServiceServer{db: db}
+	st = mysqldb.NewDB(db)
+	return &toDoServiceServer{database: st}
 }
 
 // checkAPI checks if the API version requested by client is supported by server
