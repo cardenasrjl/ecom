@@ -2,7 +2,7 @@ package grpc
 
 import (
 	"context"
-	"log"
+
 	"net"
 	"os"
 	"os/signal"
@@ -10,6 +10,8 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/cardenasrjl/ecom/pkg/api/v1"
+	"github.com/cardenasrjl/ecom/pkg/logger"
+	"github.com/cardenasrjl/ecom/pkg/protocol/grpc/middleware"
 )
 
 // RunServer runs gRPC service to publish ToDo service
@@ -19,8 +21,16 @@ func RunServer(ctx context.Context, v1API v1.ToDoServiceServer, port string) err
 		return err
 	}
 
+
+	// gRPC server statup options
+	opts := []grpc.ServerOption{}
+
+	// add middleware
+	opts = middleware.AddLogging(logger.Log, opts)
+
+
 	// register service
-	server := grpc.NewServer()
+	server := grpc.NewServer(opts...)
 	v1.RegisterToDoServiceServer(server, v1API)
 
 	// graceful shutdown
@@ -29,7 +39,7 @@ func RunServer(ctx context.Context, v1API v1.ToDoServiceServer, port string) err
 	go func() {
 		for range c {
 			// sig is a ^C, handle it
-			log.Println("shutting down gRPC server...")
+			logger.Log.Warn("shutting down gRPC server...")
 
 			server.GracefulStop()
 
@@ -38,6 +48,6 @@ func RunServer(ctx context.Context, v1API v1.ToDoServiceServer, port string) err
 	}()
 
 	// start gRPC server
-	log.Println("starting gRPC server...")
+	logger.Log.Info("starting gRPC server...")
 	return server.Serve(listen)
 }

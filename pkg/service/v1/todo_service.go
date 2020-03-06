@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/cardenasrjl/ecom/pkg/api/v1"
+	"github.com/cardenasrjl/ecom/pkg/storage/mysqldb"
 )
 
 const (
@@ -21,6 +23,7 @@ const (
 // toDoServiceServer is implementation of v1.ToDoServiceServer proto interface
 type toDoServiceServer struct {
 	db *sql.DB
+
 }
 
 // NewToDoServiceServer creates ToDo service
@@ -55,6 +58,8 @@ func (s *toDoServiceServer) Create(ctx context.Context, req *v1.CreateRequest) (
 	if err := s.checkAPI(req.Api); err != nil {
 		return nil, err
 	}
+
+
 
 	// get SQL connection from pool
 	c, err := s.connect(ctx)

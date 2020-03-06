@@ -7,11 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cardenasrjl/ecom/pkg/api/v1"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"gopkg.in/DATA-DOG/go-sqlmock.v1"
-
-	"github.com/cardenasrjl/ecom/pkg/api/v1"
 )
 
 func Test_toDoServiceServer_Create(t *testing.T) {
