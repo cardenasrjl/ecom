@@ -1,0 +1,33 @@
+syntax = "proto3";
+package v1;
+
+message SignUpRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message SignUpResponse {
+    bool status = 1 ;
+    string error = 2;
+}
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+import "protoc-gen-swagger/options/annotations.proto";
+
+
+
+//services
+service SecurityService {
+
+    // Read all todo tasks
+    rpc ReadAll(SignUpRequest) returns (SignUpResponse){
+        option (google.api.http) = {
+            get: "/v1/todo/all"
+        };
+    }
+
+}
+
+
+
