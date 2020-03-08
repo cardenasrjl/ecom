@@ -99,7 +99,6 @@ func (s *toDoServiceServer) Read(ctx context.Context, req *v1.ReadRequest) (resp
 	//if err != nil {
 	//	return
 	//}
-
 	//create the response
 	resp = &v1.ReadResponse{
 		Api:  apiVersion,
