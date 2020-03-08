@@ -4,6 +4,10 @@ import (
 	"context"
 	"database/sql"
 
+	redis2 "github.com/go-redis/redis/v7"
+
+	"github.com/cardenasrjl/ecom/pkg/storage/redis"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -19,12 +23,14 @@ const (
 // toDoServiceServer is implementation of v1.ToDoServiceServer proto interface
 type toDoServiceServer struct {
 	database *mysqldb.DB
+	redis    *redis.RdsClient
 }
 
 // NewToDoServiceServer creates ToDo service
-func NewToDoServiceServer(db *sql.DB) v1.ToDoServiceServer {
+func NewToDoServiceServer(db *sql.DB, rd *redis2.Client) v1.ToDoServiceServer {
 	st := mysqldb.NewDB(db)
-	return &toDoServiceServer{database: st}
+	rdsClient := redis.NewClient(rd)
+	return &toDoServiceServer{database: st, redis: rdsClient}
 }
 
 // checkAPI checks if the API version requested by client is supported by server
@@ -64,23 +70,42 @@ func (s *toDoServiceServer) Create(ctx context.Context, req *v1.CreateRequest) (
 }
 
 // Read todo task
-func (s *toDoServiceServer) Read(ctx context.Context, req *v1.ReadRequest) (*v1.ReadResponse, error) {
+func (s *toDoServiceServer) Read(ctx context.Context, req *v1.ReadRequest) (resp *v1.ReadResponse, err error) {
 	// check if the API version requested by client is supported by server
 	if err := s.checkAPI(req.Api); err != nil {
 		return nil, err
 	}
 
-	//gets the data from the database
-	td, err := s.database.ReadTodo(ctx, req.Id)
-	if err != nil {
-		return nil, err
-	}
+	td := &v1.ToDo{}
+	found := s.redis.Get(s.redis.Key(req.Id), td)
+	if !found {
 
-	//creates the object
-	return &v1.ReadResponse{
+		td, err = s.database.ReadTodo(ctx, req.Id)
+		if err != nil {
+			return
+		}
+
+		//save for next time
+		err = s.redis.Set(s.redis.Key(req.Id), td)
+		if err != nil {
+			return
+		}
+
+	}
+	//err = s.redis.GetSet(fmt.Sprintf("todo:%d", req.Id), &td, func() (interface{}, error) {
+	//	return s.database.ReadTodo(ctx, req.Id)
+	//})
+	//
+	//if err != nil {
+	//	return
+	//}
+	//create the response
+	resp = &v1.ReadResponse{
 		Api:  apiVersion,
 		ToDo: td,
-	}, nil
+	}
+
+	return
 
 }
 
@@ -93,6 +118,12 @@ func (s *toDoServiceServer) Update(ctx context.Context, req *v1.UpdateRequest) (
 
 	//update the resourse
 	rows, err := s.database.UpdateTodo(ctx, req.GetToDo())
+	if err != nil {
+		return nil, err
+	}
+
+	//remove from cache
+	err = s.redis.Del(s.redis.Key(req.ToDo.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +150,12 @@ func (s *toDoServiceServer) Delete(ctx context.Context, req *v1.DeleteRequest) (
 	defer c.Close()
 
 	rows, err := s.database.DeleteTodo(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	//remove from cache
+	err = s.redis.Del(s.redis.Key(req.Id))
 	if err != nil {
 		return nil, err
 	}

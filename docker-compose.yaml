@@ -9,3 +9,9 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: root
+  redis:
+    image: redis
+    expose:
+      - 6379
+    ports:
+      - 6379:6379
