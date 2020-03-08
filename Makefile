@@ -7,3 +7,7 @@ build_client:
 up: build
 	docker-compose up -d
 	./server
+
+down:
+	docker-compose down
+

@@ -1,4 +1,3 @@
-
 package cmd
 
 import (
@@ -8,12 +7,13 @@ import (
 	"fmt"
 
 	// mysql driver
+	"github.com/go-redis/redis/v7"
 	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/cardenasrjl/ecom/pkg/logger"
 	"github.com/cardenasrjl/ecom/pkg/protocol/grpc"
 	"github.com/cardenasrjl/ecom/pkg/protocol/rest"
-	"github.com/cardenasrjl/ecom/pkg/service/v1"
+	v1 "github.com/cardenasrjl/ecom/pkg/service/v1"
 )
 
 // Config is configuration for Server
@@ -36,6 +36,10 @@ type Config struct {
 	// DatastoreDBSchema is schema of database
 	DatastoreDBSchema string
 
+	//redis
+	RedisPort string
+	RedisHost string
+
 	// Log parameters section
 	// LogLevel is global log level: Debug(-1), Info(0), Warn(1), Error(2), DPanic(3), Panic(4), Fatal(5)
 	LogLevel int
@@ -51,6 +55,8 @@ func RunServer() error {
 	var cfg Config
 	flag.StringVar(&cfg.GRPCPort, "grpc-port", "8081", "gRPC port to bind")
 	flag.StringVar(&cfg.HTTPPort, "http-port", "8080", "HTTP port to bind")
+	flag.StringVar(&cfg.RedisPort, "redis-port", "6379", "Redis port to bind")
+	flag.StringVar(&cfg.RedisHost, "redis-host", "localhost", "Redis port to bind")
 	flag.StringVar(&cfg.DatastoreDBHost, "db-host", "localhost", "Database host")
 	flag.StringVar(&cfg.DatastoreDBUser, "db-user", "root", "Database user")
 	flag.StringVar(&cfg.DatastoreDBPassword, "db-password", "root", "Database password")
@@ -89,9 +95,19 @@ func RunServer() error {
 	}
 	defer db.Close()
 
+	//redis
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", cfg.RedisHost, cfg.RedisPort),
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
 
+	_, err = redisClient.Ping().Result()
+	if err != nil {
+		return fmt.Errorf("ERROR when connecting to redis %v", err)
+	}
 
-	v1API := v1.NewToDoServiceServer(db)
+	v1API := v1.NewToDoServiceServer(db, redisClient)
 
 	// run HTTP gateway
 	go func() {
